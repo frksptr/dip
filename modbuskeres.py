@@ -144,7 +144,6 @@ while 1:
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
             latestID = readID(serialPort)
-
             if (scanningID == "" and latestID not in finishedIDs):
                 scanningID = latestID
             if (isScanning == True and scanningID != latestID):
