@@ -143,7 +143,7 @@ while 1:
 
             if (scanningID == "" and latestID not in finishedIDs):
                 scanningID = latestID
-            if (isScanning == True and scanningID != latestID)
+            if (isScanning == True and scanningID != latestID):
                 continue
 
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
