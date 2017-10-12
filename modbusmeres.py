@@ -105,7 +105,7 @@ currPos = []
 
 
 t = datetime.now().time().strftime("%H%M%S")
-f = "meres/30seb12tav"+t+".txt"
+f = "meres/30seb8tav"+t+".txt"
 
 idsToSearch = 2
 
