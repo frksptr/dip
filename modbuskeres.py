@@ -143,11 +143,14 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            latestID = readID(serialPort)
-            if (scanningID == "" and latestID not in finishedIDs):
-                scanningID = latestID
-            if (isScanning == True and scanningID != latestID):
-                continue
+            if (signalEdge['type'] == "rising"):
+                latestID = readID(serialPort)
+
+                if (scanningID == "" and latestID not in finishedIDs):
+                    scanningID = latestID
+                if (isScanning == True and scanningID != latestID):
+                    continue
+
 
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(dataReadyReg, 1)
@@ -186,6 +189,7 @@ while 1:
             pointsy.append(float(y))
             log("\n {},{}".format(x,y))
             pointDict[scanningID].append(currPos)
+            msg.printMsg("\n Point added: {}".format(currPos))
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = changeState(currentState,State.CheckPositionList)
