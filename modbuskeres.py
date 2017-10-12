@@ -189,7 +189,6 @@ while 1:
             pointsy.append(float(y))
             log("\n {},{}".format(x,y))
             pointDict[scanningID].append(currPos)
-            msg.printMsg("\n Point added: {}".format(currPos))
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = changeState(currentState,State.CheckPositionList)
