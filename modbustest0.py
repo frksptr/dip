@@ -20,6 +20,8 @@ try:
     conn = client.connect()
     print(conn)
     client.write_register(500, 13)
+    asd = client.read_holding_registers(500,1)
+    print(asd.registers[0])
     client.close()
 except:
     print(sys.exc_info()[0])
