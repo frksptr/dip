@@ -17,10 +17,10 @@ from collections import defaultdict
 
 class Msg:
     msg = ""
-    cnt = 0
+f    cnt = 0
     cursorup = '\033[F'
     erase = '\033[K'
-    en = 0;
+    en = 1;
     def printMsg(self, msg):
         if (self.en == 0):
             return
@@ -66,20 +66,24 @@ def getSigned16bit(a):
     return a
 
 def readID(port):
-    line = port.readLine()
-    return line.replace("\x02","").replace("\x03")
+    line = port.readline()
+    return line.replace("\x02","").replace("\x03","")
 
 def log(s):
-    with open(f, "a") as myfile:
-        myfile.write(s)
+    #with open(f, "a") as myfile:
+    #    myfile.write(s)
     return
+
+def changeState(current, next):
+    msg.printMsg("\n Changing from '{}' to '{}'...".format(current, next))
+    return next
 
 ###############################################################################################
 
 # Raspberry config
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
-serialPort = serial.Serial('dev/ttyS0',9600)
+serialPort = serial.Serial('/dev/ttyS0',9600)
 
 # Communication registers
 dataReadyReg = 500
@@ -130,7 +134,7 @@ while 1:
     signalType = ""
 
     # Waits for RFID signal edge
-    if (cs == State.SignalWait):
+    if (currentState == State.SignalWait):
         input_v = GPIO.input(4)    
         signal = SignalFilter.step(input_v)
 
@@ -149,11 +153,11 @@ while 1:
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(dataReadyReg, 1)
 
-            currentState = State.GetPosition
+            currentState = (currentState,State.GetPosition)
             continue
     
     # Gets robot's current position data    
-    elif (cs == State.GetPosition):
+    elif (currentState == State.GetPosition):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         msg.printMsg("\n Checking if data is ready: {}".format(dataReady))
        
@@ -175,7 +179,7 @@ while 1:
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
                 if (d < 10):
-                    currentState = State.ReturnMovement
+                    currentState = (currentState,State.ReturnMovement)
                     continue
 
             currPos = [x,y]
@@ -185,36 +189,36 @@ while 1:
             pointDict[scanningID] = currPos
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
-            currentState = State.CheckPositionList
+            currentState = (currentState,State.CheckPositionList
             continue
 
     # Check if we already have two position data and can calculate next one
-    elif (cs == State.CheckPositionList):
+    elif (currentState == State.CheckPositionList):
         #print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (isScanning):
             scanPoints.append(pointDict[scanningID])
             if (len(scanPoints) < 2):
-                currentState = State.ReturnMovement
+                currentState = (currentState,State.ReturnMovement
             else:
                 scanPoints = []
                 if (iterationCounter == maxIterations):
                     print("getting center")
-                    currentState = State.CalculateCenter
+                    currentState = (currentState,State.CalculateCenter
                     continue
-                currentState = State.CalculateNewPosition
+                currentState = (currentState,State.CalculateNewPosition
         #if (len(pointArray) < 2):
         if (len(pointDict[scanningID]) < 2):
-            currentState = State.ReturnMovement
+            currentState = (currentState,State.ReturnMovement
         else:
-            currentState = State.CalculateNewPosition
+            currentState = (currentState,State.CalculateNewPositio
 
     # Need to find more points, return robot movement as it were
-    elif (cs == State.ReturnMovement):
+    elif (currentState == State.ReturnMovement):
         client.write_register(500,2)
-        currentState = State.SignalWait
+        currentState = (currentState,State.SignalWait
 
     # Calculates new position data and sends it to robot
-    elif (cs == State.CalculateNewPosition):
+    elif (currentState == State.CalculateNewPosition):
         newPointData = ujkeres(pointsx,pointsy,30)
         iterationCounter += 1
         newStart = newPointData["kezdo"]
@@ -251,10 +255,10 @@ while 1:
 
         client.write_register(500, 0)
         isScanning = True
-        currentState = State.WaitScanReady
+        currentState = (currentState,State.WaitScanReady
 
     #Calculates and moves to center
-    elif (cs == State.CalculateCenter):
+    elif (currentState == State.CalculateCenter):
         c = findCircle(pointsx,pointsy)
         print("findcircle: {}, current pos: {}".format(c,currPos))
         c = np.array(c)       
@@ -268,19 +272,19 @@ while 1:
         time.sleep(0.5)
         client.write_register(500, 5)
         client.write_register(510, 1)
-        currentState = State.Stop
+        currentState = (currentState,State.Stop
 
-    elif (cs == State.Stop):
+    elif (currentState == State.Stop):
         var = raw_input("finished?")
         log("finished")
         file = open("idmeres.txt","w")
         file.write(pointDict)
 
-    elif (cs == State.WaitScanReady):
+    elif (currentState == State.WaitScanReady):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         dataReady = dataReady.registers[0]
         if (dataReady == 5):
-            currentState = State.SignalWait
+            currentState = (currentState,State.SignalWait
             stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
