@@ -39,9 +39,11 @@ port = serial.Serial('/dev/ttyS0',9600)
 
 while True:
     t = GPIO.input(4)
-    signal = SignalFilter.step(t)
-    edge = SignalEdge.chk(signal)
+    print(t)
+    #signal = SignalFilter.step(t)
+    #edge = SignalEdge.chk(signal)
     
-    if (edge['value']==1):
-        line = port.readline()
-        print(line)
+    #if (edge['value']==1):
+      #  line = port.readline()
+      #  print(line)
+        

@@ -66,11 +66,11 @@ def getSigned16bit(a):
     return a
 
 def readID(port):
-    line = port.readLine()
-    return line.replace("\x02","").replace("\x03")
+    line = port.readline()
+    return line.replace("\x02","").replace("\x03","")
 
 def log(s):
-    with open(f, "a") as myfile:
+    with open(f, "a+") as myfile:
         myfile.write(s)
     return
 
@@ -79,7 +79,7 @@ def log(s):
 # Raspberry config
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
-serialPort = serial.Serial('dev/ttyS0',9600)
+serialPort = serial.Serial('/dev/ttyS0',9600)
 
 # Communication registers
 dataReadyReg = 500
@@ -105,7 +105,7 @@ currPos = []
 
 
 t = datetime.now().time().strftime("%H%M%S")
-f = "./meres/20meres"+t+".txt"
+f = "meres/30seb12tav"+t+".txt"
 
 idsToSearch = 2
 
@@ -130,7 +130,7 @@ while 1:
     signalType = ""
 
     # Waits for RFID signal edge
-    if (cs == State.SignalWait):
+    if (currentState == State.SignalWait):
         input_v = GPIO.input(4)    
         signal = SignalFilter.step(input_v)
 
@@ -145,7 +145,7 @@ while 1:
             continue
     
     # Gets robot's current position data    
-    elif (cs == State.GetPosition):
+    elif (currentState == State.GetPosition):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         #msg.printMsg("\n Checking if data is ready: {}".format(dataReady))
        
@@ -175,7 +175,7 @@ while 1:
             pointsx.append(float(x))
             pointsy.append(float(y))
             log("\n{},{},{}".format(latestID, x, y))
-            pointDict[scanningID] = currPos
+            pointDict[scanningID].append(currPos)
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = State.ReturnMovement
@@ -183,7 +183,7 @@ while 1:
 
 
     # Need to find more points, return robot movement as it were
-    elif (cs == State.ReturnMovement):
+    elif (currentState == State.ReturnMovement):
         client.write_register(500,2)
         currentState = State.SignalWait
    
