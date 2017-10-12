@@ -111,14 +111,14 @@ currPos = []
 t = datetime.now().time().strftime("%H%M%S")
 f = "./meres/20keres"+t+".txt"
 
-idsToSearch = 2
+idsToSearch = 1
 
 scanPoints = []
 isScanning = False
 pointsx = []
 pointsy = []
 iterationCounter = 0
-maxIterations = 3
+maxIterations = 2
 pointDict = defaultdict(list)
 
 latestID = ""
