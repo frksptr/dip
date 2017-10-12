@@ -20,7 +20,7 @@ class Msg:
     cnt = 0
     cursorup = '\033[F'
     erase = '\033[K'
-    en = 1;
+    en = 1
     def printMsg(self, msg):
         if (self.en == 0):
             return
@@ -190,6 +190,7 @@ while 1:
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = (currentState,State.CheckPositionList)
+
             continue
 
     # Check if we already have two position data and can calculate next one
