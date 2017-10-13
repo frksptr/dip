@@ -305,7 +305,7 @@ while 1:
         scanningID = ""
 
         if (len(centerDict) == 1):           
-            currentState = changeState(currentState, State.WaitSignal)
+            currentState = changeState(currentState, State.SignalWait)
         else:
             currentState = changeState(currentState, State.Stop)
             
