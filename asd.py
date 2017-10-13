@@ -1,5 +1,6 @@
 from collections import defaultdict
 from ujkeres import ujkeres
+import RPi.GPIO as GPIO
 
 # pdict = defaultdict(list)
 
@@ -14,9 +15,9 @@ from ujkeres import ujkeres
 # print(asd)
 # print(len(asd))
 
-asd =[]
+GPIO.setmode (GPIO.BCM)
+GPIO.setup(4, GPIO.IN)
 
-for a in asd:
-    print("lofasz")
-else:
-    print("gecc")
+while True:
+    input = GPIO.input(4)
+    print(input)

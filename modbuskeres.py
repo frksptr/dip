@@ -66,7 +66,7 @@ def getSigned16bit(a):
     return a
 
 def readID(port):
-    line = port.readline()
+    line = port.readline().rstrip()
     return line.replace("\x02","").replace("\x03","")
 
 def log(s):
@@ -136,10 +136,11 @@ finishedIDs = []
 
 currentState = State.SignalWait
 
-client.write_register(500, 20)
-client.write_register(510, 30)
-client.write_register(1008,40)
-client.write_register(1006,50)
+client.write_register(500, 0)
+client.write_register(510, 0)
+client.write_register(530, 0)
+client.write_register(1008,0)
+client.write_register(1006,0)
 
 while 1:
     signalType = ""
@@ -155,8 +156,11 @@ while 1:
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
             if (signalEdge['type'] == "rising"):
-                latestID = readID("")
-
+                print("rising edge")
+                latestID = readID(serialPort)
+                print("latest id: {}".format(latestID))
+                print("scanning id: {}".format(scanningID))
+                print("finishedIDs: {}".format(finishedIDs))
 
                 if (scanningID == "" and latestID not in finishedIDs):
                     scanningID = latestID
@@ -164,6 +168,7 @@ while 1:
                     continue
 
             if (signalEdge['type'] == "falling"):
+                print("falling edge")
                 if (len(finishedIDs) == 1 and (scanningID == "" or scanningID in finishedIDs)):
                     continue
 
@@ -198,7 +203,7 @@ while 1:
             # If the point is too close to the latest one, disregard
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
-                if (d < 30):
+                if (d < 40):
                     currentState = changeState(currentState,State.ReturnMovement)
                     continue
 
@@ -294,10 +299,10 @@ while 1:
         c = findCircle(pointsx[scanningID],pointsy[scanningID])
         print("findcircle: {}, current pos: {}".format(c,currPos))
         c = np.array(c)       
-        c = c - currPos
+        cd = c - currPos
 
-        cx = setNeg(c.astype(int)[0])
-        cy = setNeg(c.astype(int)[1])
+        cx = setNeg(cd.astype(int)[0])
+        cy = setNeg(cd.astype(int)[1])
 
         client.write_register(512, cx)
         client.write_register(514, cy)
@@ -305,10 +310,10 @@ while 1:
         #client.write_register(500, 5)
         #client.write_register(510, 1)
         
-        centerDict[scanningID].append([cx,cy])
+        centerDict[scanningID].append(c)
         finishedIDs.append(scanningID)
         scanningID = ""
-
+        
         if (len(centerDict) == 1):
             client.write_register(500, 3)
             currentState = changeState(currentState, State.SignalWait)
@@ -322,18 +327,25 @@ while 1:
         id1 = finishedIDs[0]
         id2 = finishedIDs[1]
         
-        print("\nIDs:\n\t{}\n\t{}".format(id1,id2))
+        #print("\nIDs:\n\t{}\n\t{}".format(id1,
+        c1 = centerDict[id1][0]
+        c2 = centerDict[id2][0]
         
-        print("\n{}".format(centerDict[id1][0][0]))
-        print("\n{}".format(centerDict[id2][0][0]))
-        print("\n{}".format(centerDict[id1][0][1]))
-        print("\n{}".format(centerDict[id2][0][1]))
-        
-        client.write_register(id1RegX, centerDict[id1][0][0])
-        client.write_register(id1RegY, centerDict[id1][0][1])
-        client.write_register(id2RegX, centerDict[id2][0][0])
-        client.write_register(id2RegY, centerDict[id2][0][1])
+        c1 = c1 - currPos
+        c2 = c2 - currPos
 
+        c1x = setNeg(c1.astype(int)[0])
+        c1y = setNeg(c1.astype(int)[1])
+        
+        c2x = setNeg(c2.astype(int)[0])
+        c2y = setNeg(c2.astype(int)[1])
+        
+        client.write_register(id1RegX, c1x)
+        client.write_register(id1RegY, c1y)
+        client.write_register(id2RegX, c2x)
+        client.write_register(id2RegY, c2y)
+     
+        client.write_register(500, 3)
         client.write_register(startIdSwayReg, 1)
 
     elif (currentState == State.WaitScanReady):
