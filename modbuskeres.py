@@ -87,7 +87,7 @@ def changeState(current, next):
 # Raspberry config
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
-serialPort = serial.Serial('/dev/ttyS0', 9600, timeout = 0.25)
+serialPort = serial.Serial('/dev/ttyS0', 9600, timeout = 0.4)
 
 # Communication registers
 dataReadyReg = 500
@@ -121,7 +121,7 @@ currPos = []
 
 
 t = datetime.now().time().strftime("%H%M%S")
-f = "./meres/30keresKozep"+t+".txt"
+f = "./meres/40keresKozep"+t+".txt"
 
 idsToSearch = 2
 
