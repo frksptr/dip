@@ -52,6 +52,7 @@ class State(Enum):
     ReturnMovement = 6
     CalculateCenter = 7
     Stop = 8
+    StopAll = 9
 
 
 def setNeg(n):
@@ -66,12 +67,15 @@ def getSigned16bit(a):
     return a
 
 def readID(port):
-    line = port.readline().rstrip()
-    return line.replace("\x02","").replace("\x03","")
+    line = port.readline().rstrip().replace("\x02","").replace("\x03","")
+    if (len(line)==12):
+        return line
+    else:
+        return ""
 
 def log(s):
-    #with open(f, "a") as myfile:
-    #    myfile.write(s)
+    with open(f, "a+") as myfile:
+        myfile.write(s)
     return
 
 def changeState(current, next):
@@ -83,7 +87,7 @@ def changeState(current, next):
 # Raspberry config
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
-serialPort = serial.Serial('/dev/ttyS0',9600)
+serialPort = serial.Serial('/dev/ttyS0', 9600, timeout = 0.25)
 
 # Communication registers
 dataReadyReg = 500
@@ -117,7 +121,7 @@ currPos = []
 
 
 t = datetime.now().time().strftime("%H%M%S")
-f = "./meres/20keres"+t+".txt"
+f = "./meres/30keresKozep"+t+".txt"
 
 idsToSearch = 2
 
@@ -162,7 +166,7 @@ while 1:
                 print("scanning id: {}".format(scanningID))
                 print("finishedIDs: {}".format(finishedIDs))
 
-                if (scanningID == "" and latestID not in finishedIDs):
+                if (scanningID == "" and latestID not in finishedIDs and latestID != ""):
                     scanningID = latestID
                 if (isScanning == True and scanningID != latestID):
                     continue
@@ -330,6 +334,7 @@ while 1:
         #print("\nIDs:\n\t{}\n\t{}".format(id1,
         c1 = centerDict[id1][0]
         c2 = centerDict[id2][0]
+        log("\nCenters: {} - {}".format(c1,c2))
         
         c1 = c1 - currPos
         c2 = c2 - currPos
@@ -347,6 +352,11 @@ while 1:
      
         client.write_register(500, 3)
         client.write_register(startIdSwayReg, 1)
+        currentState = changeState(currentState,State.StopAll)
+        
+    elif (currentState == State.StopAll):
+        jkl = 0
+        
 
     elif (currentState == State.WaitScanReady):
         dataReady = client.read_holding_registers(1008,1)

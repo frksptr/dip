@@ -35,15 +35,23 @@ SignalFilter = Filter(16)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
 
-port = serial.Serial('/dev/ttyS0',9600)
+port = serial.Serial('/dev/ttyS0',9600, timeout = 0.25)
+
+def readID(port):
+    line = port.readline().rstrip().replace("\x02","").replace("\x03","")
+    if (len(line)==12):
+        return line
+    else:
+        return ""
 
 while True:
     t = GPIO.input(4)
-    print(t)
-    #signal = SignalFilter.step(t)
-    #edge = SignalEdge.chk(signal)
+    #print(t)
+    signal = SignalFilter.step(t)
+    edge = SignalEdge.chk(signal)
     
-    #if (edge['value']==1):
-      #  line = port.readline()
-      #  print(line)
+    if (edge['value']==1):
+        print(edge['type'])
+        line = readID(port)
+        print(line)
         
