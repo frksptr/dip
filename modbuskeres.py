@@ -89,7 +89,8 @@ serialPort = serial.Serial('/dev/ttyS0',9600)
 dataReadyReg = 500
 dataXReg = 1000
 dataYReg = 1002
-newDataReadyReg = 1008
+newDataReadyReg = 1006
+scanReadyReg = 1008
 dataRead = 0
 
 id1RegX = 520
@@ -99,7 +100,7 @@ id2RegY = 526
 startIdSwayReg = 530
 
 
-ip = '192.168.0.42'
+ip = '192.168.0.104'
 client = ModbusTcpClient(ip, 502)
 conn = client.connect()
  
@@ -126,7 +127,7 @@ isScanning = False
 pointsx = defaultdict(list)
 pointsy = defaultdict(list)
 iterationCounter = 0
-maxIterations = 2
+maxIterations = 1
 pointDict = defaultdict(list)
 centerDict = defaultdict(list)
 
@@ -138,6 +139,7 @@ currentState = State.SignalWait
 
 client.write_register(500, 0)
 client.write_register(510, 0)
+client.write_register(1008,0)
 client.write_register(1006,0)
 
 while 1:
@@ -178,7 +180,7 @@ while 1:
             continue
         dataReady = dataReady.registers[0]
 
-        readyEdge = ReadyEdge.chk(dataReady)['value']
+        readyEdge = ReadyEdge.chk(dataReady)
 
         if (readyEdge['value'] == 1 and readyEdge['type'] == "rising"):
             time.sleep(0.5)
@@ -317,9 +319,10 @@ while 1:
         client.write_register(startIdSwayReg, 1)
 
     elif (currentState == State.WaitScanReady):
-        dataReady = client.read_holding_registers(newDataReadyReg,1)
+        dataReady = client.read_holding_registers(1008,1)
         dataReady = dataReady.registers[0]
-        if (dataReady == 1):
+        if (dataReady == 2):
+            client.write_register(1008, 0)
             client.write_register(newDataReadyReg, 0)
             currentState = changeState(currentState,State.SignalWait)
             #stateMachine.event("ScanReady")

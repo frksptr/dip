@@ -16,7 +16,7 @@ def setNeg(n):
     
 
 try:
-    client = ModbusTcpClient('192.168.0.18',502)
+    client = ModbusTcpClient('192.168.0.104',502)
     conn = client.connect()
     print(conn)
     client.write_register(500, 13)
