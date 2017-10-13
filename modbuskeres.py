@@ -155,11 +155,12 @@ while 1:
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
 
+            if (latestID in finishedIDs):
+                continue
+                
             if (signalEdge['type'] == "rising"):
                 latestID = readID(serialPort)
-                if (latestID in finishedIDs):
-                    currentState = changeState(currentState, State.ReturnMovement)
-                    continue
+
                 if (scanningID == "" and latestID not in finishedIDs):
                     scanningID = latestID
                 if (isScanning == True and scanningID != latestID):
@@ -196,7 +197,7 @@ while 1:
             # If the point is too close to the latest one, disregard
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
-                if (d < 10):
+                if (d < 30):
                     currentState = changeState(currentState,State.ReturnMovement)
                     continue
 
