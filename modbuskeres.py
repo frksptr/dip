@@ -203,13 +203,14 @@ while 1:
         #print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (isScanning):
             msg.printMsg("\n scanPoints length: {}".format(len(scanPoints)))               
-            msg.printMsg("\nKibaszott pointDict[{}}][-1:][0]: {}".format(scanningID,pointDict[scanningID][-1:][0]))
+            msg.printMsg("\nKibaszott pointDict[{}][-1:][0]: {}".format(scanningID,pointDict[scanningID][-1:][0]))
             scanPoints.append(pointDict[scanningID][-1:][0])
 
             if (len(scanPoints) < 2):
                 currentState = changeState(currentState,State.ReturnMovement)
             else:
                 scanPoints = []
+                msg.printMsg("\nIterationCounter: {} | max iterations: {}".format(iterationCounter,maxIterations))
                 if (iterationCounter >= maxIterations):
                     print("getting center")
                     currentState = changeState(currentState,State.CalculateCenter)
