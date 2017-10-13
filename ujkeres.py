@@ -26,8 +26,8 @@ def ujkeres(x,y,r):
     
     #print("iranyvektor {}".format(iranyvektor))
     #print("felezo {}".format(felezo))
-    kezdo = felezo + iranyvektor*(2*r)
-    veg = felezo - iranyvektor*(2*r)
+    kezdo = felezo + iranyvektor*(2.5*r)
+    veg = felezo - iranyvektor*(2.5*r)
     return {'kezdo': kezdo, 'veg': veg}
 
 def sortCCW(xArray, yArray):

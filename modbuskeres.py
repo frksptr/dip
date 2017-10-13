@@ -52,7 +52,6 @@ class State(Enum):
     ReturnMovement = 6
     CalculateCenter = 7
     Stop = 8
-    WaitCenterReady = 9
 
 
 def setNeg(n):
@@ -108,7 +107,6 @@ conn = client.connect()
 SignalFilter = Filter(16)
 SignalEdge = Edge()
 ReadyEdge = Edge()
-CenterReadyEdge = Edge()
 msg = Msg()
 
 edgeDetected = 0
@@ -139,10 +137,10 @@ finishedIDs = []
 
 currentState = State.SignalWait
 
-client.write_register(500, 0)
-client.write_register(510, 0)
-client.write_register(1008,0)
-client.write_register(1006,0)
+client.write_register(500, 20)
+client.write_register(510, 30)
+client.write_register(1008,40)
+client.write_register(1006,50)
 
 while 1:
     signalType = ""
@@ -167,8 +165,8 @@ while 1:
 
 
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
+            client.write_register(newDataReadyReg, 0)
             client.write_register(dataReadyReg, 1)
-
             currentState = changeState(currentState,State.GetPosition)
             continue
     
@@ -184,7 +182,9 @@ while 1:
 
         readyEdge = ReadyEdge.chk(dataReady)
 
-        if (readyEdge['value'] == 1 and readyEdge['type'] == "rising"):
+        #if (readyEdge['value'] == 1 and readyEdge['type'] == "rising"):
+        if (dataReady == 1):
+            client.write_register(newDataReadyReg,0)
             time.sleep(0.5)
 
             xy = client.read_holding_registers(dataXReg,4)
@@ -280,6 +280,7 @@ while 1:
         client.write_register(508, neyd)
 
         client.write_register(500, 0)
+        client.write_register(newDataReadyReg,0)
         isScanning = True
         currentState = changeState(currentState,State.WaitScanReady)
 
@@ -297,20 +298,21 @@ while 1:
         client.write_register(514, cy)
         time.sleep(0.5)
         #client.write_register(500, 5)
-        client.write_register(500, 3) #goCenter
+        #client.write_register(510, 1)
         
         centerDict[scanningID].append([cx,cy])
         if (len(centerDict) == 1):
             finishedIDs.append(scanningID)
-            currentState = changeState(currentState, State.WaitSignal)
+            time.sleep(3)
+            client.write_register(500,3)
+            currentState = changeState(currentState, State.SignalWait)
         else:
             currentState = changeState(currentState, State.Stop)
+            
 
-    elif (currentState == State.WaitCenterReady):
-        centerReady = centerReadyEdge.chk()
-        client.write_register(500,2)
 
     elif (currentState == State.Stop):
+
         id1 = finishedIDs[0]
         id2 = finishedIDs[1]
 
