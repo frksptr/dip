@@ -112,7 +112,6 @@ msg = Msg()
 edgeDetected = 0
 dataReadyEdgeDetected = 0
 
-pointArray = []
 currPos = []
 
 
@@ -284,6 +283,7 @@ while 1:
         isScanning = True
         currentState = changeState(currentState,State.WaitScanReady)
 
+    
     #Calculates and moves to center
     elif (currentState == State.CalculateCenter):
         c = findCircle(pointsx[scanningID],pointsy[scanningID])
@@ -301,11 +301,11 @@ while 1:
         #client.write_register(510, 1)
         
         centerDict[scanningID].append([cx,cy])
-        if (len(centerDict) == 1):
-            finishedIDs.append(scanningID)
-            time.sleep(3)
-            client.write_register(500,3)
-            currentState = changeState(currentState, State.SignalWait)
+        finishedIDs.append(scanningID)
+        scanningID = ""
+
+        if (len(centerDict) == 1):           
+            currentState = changeState(currentState, State.WaitSignal)
         else:
             currentState = changeState(currentState, State.Stop)
             
