@@ -7,6 +7,8 @@ from statemachine import StateMapElement, StateMachine
 from datetime import datetime
 from ujkeres import ujkeres
 from korkeres import findCircle
+from enum import Enum
+
 import time
 
 class Msg:
@@ -61,30 +63,25 @@ ReadyEdge = Edge()
 msg = Msg();
 
 
+
 edgeDetected = 0
 dataReadyEdgeDetected = 0
-
-stateMap = [
-    StateMapElement("SignalRise","SignalWait","GetPosition"),
-    StateMapElement("RobotPositionReady","GetPosition","CheckPositionList"),
-    StateMapElement("FalsePosition","GetPosition","ReturnMovement"),
-    StateMapElement("GetMoreInitialPos","CheckPositionList","ReturnMovement"),
-    StateMapElement("GetNextPos","CheckPositionList","CalculateNewPosition"),
-    StateMapElement("RetMov","ReturnMovement","SignalWait"),
-    StateMapElement("NewPositionSet","CalculateNewPosition","WaitScanReady"),
-    StateMapElement("ScanReady","WaitScanReady","SignalWait"),
-    StateMapElement("ReturnScanning","CheckPositionList","ReturnMovement"),
-    StateMapElement("IterationOver","CheckPositionList","CalculateCenter"),
-    StateMapElement("Finished","CalculateCenter","Stop"),
-]
-
-stateMachine = StateMachine(stateMap)
 
 pointArray = []
 currPos = []
 
 client.write_register(500, 0)
 client.write_register(510, 0)
+
+class State(Enum):
+    SignalWait = 1
+    GetPosition = 2
+    CheckPositionList = 3
+    CalculateNewPosition = 4
+    WaitScanReady = 5
+    ReturnMovement = 6
+    CalculateCenter = 7
+    Stop = 8
 
 
 def setNeg(n):
@@ -107,16 +104,14 @@ pointsx = []
 pointsy = []
 iterationCounter = 0
 maxIterations = 2
+currentState = State.SignalWait
 
 while 1:
     signalType = ""
 
-    cs = stateMachine.currentState
-
     # Waits for RFID signal edge
-    if (cs == "SignalWait"):
+    if (cs == State.SignalWait):
         input_v = GPIO.input(4)    
-
         signal = SignalFilter.step(input_v)
         
         signalEdge = SignalEdge.chk(signal)
@@ -124,13 +119,13 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            msg.printMsg("\n Edge detected, setting Reg500 to 1")
-            client.write_register(500, 1)
-            stateMachine.event("SignalRise")
+            #msg.printMsg("\n Edge detected, setting Reg500 to 1")
+            client.write_register(dataReadyReg, 1)
+            currentState = State.GetPosition
             continue
     
     # Gets robot's current position data    
-    elif (cs == "GetPosition"):
+    elif (cs == State.GetPosition):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         msg.printMsg("\n Checking if data is ready: {}".format(dataReady))
        
@@ -149,7 +144,7 @@ while 1:
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
                 if (d < 10):
-                    stateMachine.event("FalsePosition")
+                    currentState = State.ReturnMovement
                     continue
 
             currPos = [x,y]
@@ -158,36 +153,35 @@ while 1:
             log("\n {},{}".format(x,y))
             pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
-            stateMachine.event("RobotPositionReady")
+            currentState = State.CheckPositionList
             continue
 
     # Check if we already have two position data and can calculate next one
-    elif (cs == "CheckPositionList"):
+    elif (cs == State.CheckPositionList):
         print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (scanning == 1):
             scanPoints.append(currPos)
             if (len(scanPoints) < 2):
-                stateMachine.event("ReturnScanning")
+                currentState = State.ReturnMovement
             else:
                 scanPoints = []
                 if (iterationCounter == maxIterations):
                     print("getting center")
-                    stateMachine.event("IterationOver")
+                    currentState = State.CalculateCenter
                     continue
-                stateMachine.event("GetNextPos")
+                currentState = State.CalculateNewPosition
         if (len(pointArray) < 2):
-            stateMachine.event("GetMoreInitialPos")
+            currentState = State.ReturnMovement
         else:
-            stateMachine.event("GetNextPos")
+            currentState = State.CalculateNewPosition
 
     # Need to find more points, return robot movement as it were
-    elif (cs == "ReturnMovement"):
+    elif (cs == State.ReturnMovement):
         client.write_register(500,2)
-        stateMachine.event("RetMov")
-        
+        currentState = State.SignalWait
 
     # Calculates new position data and sends it to robot
-    elif (cs == "CalculateNewPosition"):
+    elif (cs == State.CalculateNewPosition):
         newPointData = ujkeres(pointsx,pointsy,30)
         iterationCounter += 1
         newStart = newPointData["kezdo"]
@@ -224,10 +218,10 @@ while 1:
 
         client.write_register(500, 0)
         scanning = 1
-        stateMachine.event("NewPositionSet")
+        currentState = State.WaitScanReady
 
     #Calculates and moves to center
-    elif (cs == "CalculateCenter"):
+    elif (cs == State.CalculateCenter):
         c = findCircle(pointsx,pointsy)
         print("findcircle: {}, current pos: {}".format(c,currPos))
         c = np.array(c)       
@@ -241,18 +235,20 @@ while 1:
         time.sleep(0.5)
         client.write_register(500, 5)
         client.write_register(510, 1)
-        stateMachine.event("Finished")
+        currentState = State.Stop
 
-    elif (cs == "Stop"):
+    elif (cs == State.Stop):
         var = raw_input("finished?")
         log("finished")
         
 
-    elif (cs == "WaitScanReady"):
+    elif (cs == State.WaitScanReady):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         dataReady = dataReady.registers[0]
         if (dataReady == 5):
+            currentState = State.SignalWait
             stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
+    
 client.close()
