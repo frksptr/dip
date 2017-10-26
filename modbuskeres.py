@@ -49,18 +49,18 @@ GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
 
 
-dataReadyReg = 500;
-dataXReg = 1000;
-dataYReg = 1002;
-newDataReadyReg = 1006;
-dataRead = 0;
-client = ModbusTcpClient('192.168.0.104',502)
+dataReadyReg = 500
+dataXReg = 1000
+dataYReg = 1002
+newDataReadyReg = 1006
+dataRead = 0
+client = ModbusTcpClient('192.168.0.104', 502)
 conn = client.connect()
 
 SignalFilter = Filter(16)
 SignalEdge = Edge()
 ReadyEdge = Edge()
-msg = Msg();
+msg = Msg()
 
 
 
@@ -113,7 +113,7 @@ while 1:
     if (cs == State.SignalWait):
         input_v = GPIO.input(4)    
         signal = SignalFilter.step(input_v)
-        
+
         signalEdge = SignalEdge.chk(signal)
         signalType = signalEdge['type']
 
@@ -138,9 +138,12 @@ while 1:
 
         if (readyEdge):
             time.sleep(0.5)
+
             xy = client.read_holding_registers(dataXReg,4)
             x =  getSigned16bit(xy.registers[0])
             y = getSigned16bit(xy.registers[2])
+
+            # If the point is too close to the latest one, disregard
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
                 if (d < 10):
@@ -250,5 +253,5 @@ while 1:
             stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
-    
+
 client.close()
