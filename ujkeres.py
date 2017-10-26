@@ -11,8 +11,6 @@ def ujkeres(x,y,r):
     #print("diff {}".format(diff))
     n = np.linalg.norm(diff)
     #print("n {}".format(n))
-    scale = 1/(n/(2*r)*r)
-    #print("scale {}".format(scale))
     if (diff[0] == 0):
         mmeroleges = 0
         iranyvektor = np.array([0,1])

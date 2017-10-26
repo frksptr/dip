@@ -35,6 +35,7 @@ SignalFilter = Filter(16)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
 
+
 port = serial.Serial('/dev/ttyS0',9600)
 
 while True:

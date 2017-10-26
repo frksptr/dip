@@ -1,13 +1,15 @@
-from pymodbus.client.sync import ModbusTcpClient
-from helper import Edge, Filter
 import sys
 import numpy as np
 import RPi.GPIO as GPIO
+import serial
+import time
+from pymodbus.client.sync import ModbusTcpClient
+from helper import Edge, Filter
 from statemachine import StateMapElement, StateMachine
 from datetime import datetime
 from ujkeres import ujkeres
 from korkeres import findCircle
-import time
+from collections import defaultdict
 
 class Msg:
     msg = ""
@@ -30,13 +32,6 @@ class Msg:
            #print(msg)
 
 
-#y 30 110
-#x 360 440
-        
-#z 25
-
-#406-33
-
 def getSigned16bit(a):
     if (a >> 15) & 1:
         return a - (1 << 16)
@@ -45,20 +40,20 @@ def getSigned16bit(a):
 
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
+serialPort = serial.Serial('/dev/ttyS0',9600)
 
-
-dataReadyReg = 500;
-dataXReg = 1000;
-dataYReg = 1002;
-newDataReadyReg = 1006;
-dataRead = 0;
+dataReadyReg = 500
+dataXReg = 1000
+dataYReg = 1002
+newDataReadyReg = 1006
+dataRead = 0
 client = ModbusTcpClient('192.168.0.104',502)
 conn = client.connect()
 
 SignalFilter = Filter(16)
 SignalEdge = Edge()
 ReadyEdge = Edge()
-msg = Msg();
+msg = Msg()
 
 
 edgeDetected = 0
@@ -76,6 +71,7 @@ stateMap = [
     StateMapElement("ReturnScanning","CheckPositionList","ReturnMovement"),
     StateMapElement("IterationOver","CheckPositionList","CalculateCenter"),
     StateMapElement("Finished","CalculateCenter","Stop"),
+    StateMapElement("RetMov","SignalWait","SignalWait")
 ]
 
 stateMachine = StateMachine(stateMap)
@@ -83,15 +79,15 @@ stateMachine = StateMachine(stateMap)
 pointArray = []
 currPos = []
 
-client.write_register(500, 0)
+client.write_register(dataReadyReg, 0)
 client.write_register(510, 0)
 
 
 def setNeg(n):
     if (n < 0):
-        return n+pow(2,16);
+        return n+pow(2,16)
     else:
-        return n;
+        return n
 
 t = datetime.now().time().strftime("%H%M%S")
 f = "./meres/20keres"+t+".txt"
@@ -103,10 +99,41 @@ def log(s):
 
 scanPoints = []
 scanning = 0
-pointsx = []
-pointsy = []
 iterationCounter = 0
 maxIterations = 2
+maxScanDiff = 0.5
+
+pointDict = defaultdict(list)
+
+scanningID = ""
+
+def getExpectedCenterPoints(points):
+    # ! handle radius dependency on distance from tag
+    r = 4
+    a = points[0]
+    b = points[1]
+
+    distance = np.linalg.norm(a-b)
+
+    mid = (a+b)/2
+
+    m =  sqrt(pow(r,2)-pow(distance/2,2))
+
+    diff = a-b
+
+    if (diff[0] == 0):
+        mmeroleges = 0
+        iranyvektor = np.array([0,1])
+    else:
+        m = diff[1]/diff[0]
+        if (m == 0):
+            iranyvektor = np.array([0,1])
+        else:
+            mmeroleges = -1/m
+            iranyvektor = np.array([1,mmeroleges] / np.sqrt(1+mmeroleges**2))
+
+    center1 = mid - iranyvektor * m
+    center2 = mid + iranyvektor * m
 
 while 1:
     signalType = ""
@@ -124,8 +151,17 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            msg.printMsg("\n Edge detected, setting Reg500 to 1")
-            client.write_register(500, 1)
+            line = serialPort.readLine()
+
+            # !!! ?handle timeout? !!!
+            newID = line.replace("\x02","").replace("\x03","")
+            if (scanningID == "")
+                scanningID = newID
+            if (scanning == 1 and scanningID != newID) 
+                stateMachine.event("RetMov")
+
+            msg.printMsg("\n Edge detected, setting RegdataReadyReg to 1")
+            client.write_register(dataReady, 1)
             stateMachine.event("SignalRise")
             continue
     
@@ -144,37 +180,54 @@ while 1:
         if (readyEdge):
             time.sleep(0.5)
             xy = client.read_holding_registers(dataXReg,4)
-            x =  getSigned16bit(xy.registers[0])
+            x = getSigned16bit(xy.registers[0])
             y = getSigned16bit(xy.registers[2])
+
             if (len(currPos)>0):
+                # Filter positions too close to each other
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
                 if (d < 10):
                     stateMachine.event("FalsePosition")
                     continue
 
             currPos = [x,y]
-            pointsx.append(float(x))
-            pointsy.append(float(y))
             log("\n {},{}".format(x,y))
-            pointArray.append(currPos)
+
+            pointDict[scanningID].append(currPos)
+
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             stateMachine.event("RobotPositionReady")
             continue
 
     # Check if we already have two position data and can calculate next one
+    # Check if the two points are where they are supposed to be, if not, there
+    # was probably a tag overlap
     elif (cs == "CheckPositionList"):
-        print("{}, length: {} ".format(pointArray,len(pointArray)))
+        #print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (scanning == 1):
             scanPoints.append(currPos)
             if (len(scanPoints) < 2):
                 stateMachine.event("ReturnScanning")
             else:
-                scanPoints = []
+                #scanPoints = []
                 if (iterationCounter == maxIterations):
                     print("getting center")
                     stateMachine.event("IterationOver")
                     continue
+                
+                scanMiddle = (scanPoints[0]+scanPoints[1]) / 2
+                
+                currentPointList = pointDict[scanningID]
+
+                expectedCenters = getExpectedCenterPoints(currentPointList[-2:])
+
+                if (np.linalg.norm(expectedCenters[0] - scanMiddle) > maxScanDiff or
+                np.linalg.norm(expectedCenters[1] - scanMiddle) > maxScanDiff )
+                    # átfedés lekezelése
+                    
+                scanPoints = []
                 stateMachine.event("GetNextPos")
+                
         if (len(pointArray) < 2):
             stateMachine.event("GetMoreInitialPos")
         else:
@@ -182,13 +235,16 @@ while 1:
 
     # Need to find more points, return robot movement as it were
     elif (cs == "ReturnMovement"):
-        client.write_register(500,2)
+        client.write_register(dataReady,2)
         stateMachine.event("RetMov")
         
 
     # Calculates new position data and sends it to robot
     elif (cs == "CalculateNewPosition"):
-        newPointData = ujkeres(pointsx,pointsy,30)
+        currPoints = pointDict[currentID]
+        currXs = [p[0] for p in currPoints]
+        currYs = [p[1] for p in currPoints] 
+        newPointData = ujkeres(currXs, currYs, 30)
         iterationCounter += 1
         newStart = newPointData["kezdo"]
         newEnd = newPointData["veg"]
@@ -222,13 +278,18 @@ while 1:
         client.write_register(506, nexd)
         client.write_register(508, neyd)
 
-        client.write_register(500, 0)
+        client.write_register(dataReady, 0)
         scanning = 1
         stateMachine.event("NewPositionSet")
 
     #Calculates and moves to center
     elif (cs == "CalculateCenter"):
-        c = findCircle(pointsx,pointsy)
+        currPoints = pointDict[currentID]
+        currXs = [p[0] for p in currPoints]
+        currYs = [p[1] for p in currPoints] 
+
+        c = findCircle(currXs, currYs)
+
         print("findcircle: {}, current pos: {}".format(c,currPos))
         c = np.array(c)       
         c = c - currPos
@@ -239,7 +300,7 @@ while 1:
         client.write_register(512, cx)
         client.write_register(514, cy)
         time.sleep(0.5)
-        client.write_register(500, 5)
+        client.write_register(dataReady, 5)
         client.write_register(510, 1)
         stateMachine.event("Finished")
 
