@@ -1,15 +1,19 @@
-from pymodbus.client.sync import ModbusTcpClient
-from helper import Edge, Filter
 import sys
+import serial
 import numpy as np
 import RPi.GPIO as GPIO
+import time
+
+from pymodbus.client.sync import ModbusTcpClient
+from helper import Edge, Filter
 from statemachine import StateMapElement, StateMachine
 from datetime import datetime
 from ujkeres import ujkeres
 from korkeres import findCircle
 from enum import Enum
+from collections import defaultdict
 
-import time
+#######################################################################################################
 
 class Msg:
     msg = ""
@@ -39,40 +43,6 @@ class Msg:
 
 #406-33
 
-def getSigned16bit(a):
-    if (a >> 15) & 1:
-        return a - (1 << 16)
-    return a
-
-
-GPIO.setmode (GPIO.BCM)
-GPIO.setup(4, GPIO.IN)
-
-
-dataReadyReg = 500
-dataXReg = 1000
-dataYReg = 1002
-newDataReadyReg = 1006
-dataRead = 0
-client = ModbusTcpClient('192.168.0.104', 502)
-conn = client.connect()
-
-SignalFilter = Filter(16)
-SignalEdge = Edge()
-ReadyEdge = Edge()
-msg = Msg()
-
-
-
-edgeDetected = 0
-dataReadyEdgeDetected = 0
-
-pointArray = []
-currPos = []
-
-client.write_register(500, 0)
-client.write_register(510, 0)
-
 class State(Enum):
     SignalWait = 1
     GetPosition = 2
@@ -86,25 +56,75 @@ class State(Enum):
 
 def setNeg(n):
     if (n < 0):
-        return n+pow(2,16);
+        return n+pow(2,16)
     else:
-        return n;
+        return n
 
-t = datetime.now().time().strftime("%H%M%S")
-f = "./meres/20keres"+t+".txt"
+def getSigned16bit(a):
+    if (a >> 15) & 1:
+        return a - (1 << 16)
+    return a
+
+def readID(port):
+    line = port.readLine()
+    return line.replace("\x02","").replace("\x03")
 
 def log(s):
     with open(f, "a") as myfile:
         myfile.write(s)
     return
 
+###############################################################################################
+
+# Raspberry config
+GPIO.setmode (GPIO.BCM)
+GPIO.setup(4, GPIO.IN)
+serialPort = serial.Serial('dev/ttyS0',9600)
+
+# Communication registers
+dataReadyReg = 500
+dataXReg = 1000
+dataYReg = 1002
+newDataReadyReg = 1006
+dataRead = 0
+
+client = ModbusTcpClient('192.168.0.104', 502)
+conn = client.connect()
+
+SignalFilter = Filter(16)
+SignalEdge = Edge()
+ReadyEdge = Edge()
+msg = Msg()
+
+edgeDetected = 0
+dataReadyEdgeDetected = 0
+
+pointArray = []
+currPos = []
+
+
+
+t = datetime.now().time().strftime("%H%M%S")
+f = "./meres/20keres"+t+".txt"
+
+idsToSearch = 2
+
 scanPoints = []
-scanning = 0
+isScanning = False
 pointsx = []
 pointsy = []
 iterationCounter = 0
 maxIterations = 2
+pointDict = defaultdict(list)
+
+latestID = ""
+scanningID = ""
+finishedIDs = []
+
 currentState = State.SignalWait
+
+client.write_register(500, 0)
+client.write_register(510, 0)
 
 while 1:
     signalType = ""
@@ -119,8 +139,16 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            #msg.printMsg("\n Edge detected, setting Reg500 to 1")
+            latestID = readID(serialPort)
+
+            if (scanningID == "" and latestID not in finishedIDs):
+                scanningID = latestID
+            if (isScanning == True and scanningID != latestID)
+                continue
+
+            msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(dataReadyReg, 1)
+
             currentState = State.GetPosition
             continue
     
@@ -154,16 +182,17 @@ while 1:
             pointsx.append(float(x))
             pointsy.append(float(y))
             log("\n {},{}".format(x,y))
-            pointArray.append(currPos)
+            pointDict[scanningID] = currPos
+            #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = State.CheckPositionList
             continue
 
     # Check if we already have two position data and can calculate next one
     elif (cs == State.CheckPositionList):
-        print("{}, length: {} ".format(pointArray,len(pointArray)))
-        if (scanning == 1):
-            scanPoints.append(currPos)
+        #print("{}, length: {} ".format(pointArray,len(pointArray)))
+        if (isScanning):
+            scanPoints.append(pointDict[scanningID])
             if (len(scanPoints) < 2):
                 currentState = State.ReturnMovement
             else:
@@ -173,7 +202,8 @@ while 1:
                     currentState = State.CalculateCenter
                     continue
                 currentState = State.CalculateNewPosition
-        if (len(pointArray) < 2):
+        #if (len(pointArray) < 2):
+        if (len(pointDict[scanningID]) < 2):
             currentState = State.ReturnMovement
         else:
             currentState = State.CalculateNewPosition
@@ -220,7 +250,7 @@ while 1:
         client.write_register(508, neyd)
 
         client.write_register(500, 0)
-        scanning = 1
+        isScanning = True
         currentState = State.WaitScanReady
 
     #Calculates and moves to center
@@ -255,3 +285,4 @@ while 1:
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
 
 client.close()
+
