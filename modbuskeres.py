@@ -114,7 +114,7 @@ isScanning = False
 pointsx = []
 pointsy = []
 iterationCounter = 0
-maxIterations = 2
+maxIterations = 3
 pointDict = defaultdict(list)
 
 latestID = ""
@@ -273,7 +273,8 @@ while 1:
     elif (cs == State.Stop):
         var = raw_input("finished?")
         log("finished")
-        
+        file = open("idmeres.txt","w")
+        file.write(pointDict)
 
     elif (cs == State.WaitScanReady):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
