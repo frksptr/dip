@@ -186,7 +186,7 @@ while 1:
             pointsx.append(float(x))
             pointsy.append(float(y))
             log("\n {},{}".format(x,y))
-            pointDict[scanningID] = currPos
+            pointDict[scanningID].append(currPos)
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = changeState(currentState,State.CheckPositionList)
@@ -199,7 +199,7 @@ while 1:
         #print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (isScanning):
             msg.printMsg("\n scanPoints length: {}".format(len(scanPoints)))               
-            scanPoints.append(pointDict[scanningID])
+            scanPoints.append(pointDict[scanningID][-1:][0])
             if (len(scanPoints) < 2):
                 currentState = changeState(currentState,State.ReturnMovement)
             else:
