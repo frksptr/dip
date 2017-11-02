@@ -292,7 +292,7 @@ while 1:
         dataReady = dataReady.registers[0]
         if (dataReady == 5):
             currentState = changeState(currentState,State.SignalWait)
-            stateMachine.event("ScanReady")
+            #stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
 
