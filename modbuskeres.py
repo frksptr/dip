@@ -143,12 +143,13 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            latestID = readID(serialPort)
+            if (signalEdge['type'] == "rising"):
+                latestID = readID(serialPort)
 
-            if (scanningID == "" and latestID not in finishedIDs):
-                scanningID = latestID
-            if (isScanning == True and scanningID != latestID):
-                continue
+                if (scanningID == "" and latestID not in finishedIDs):
+                    scanningID = latestID
+                if (isScanning == True and scanningID != latestID):
+                    continue
 
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(dataReadyReg, 1)
