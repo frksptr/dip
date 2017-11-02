@@ -17,10 +17,10 @@ from collections import defaultdict
 
 class Msg:
     msg = ""
-f    cnt = 0
+    cnt = 0
     cursorup = '\033[F'
     erase = '\033[K'
-    en = 1;
+    en = 1
     def printMsg(self, msg):
         if (self.en == 0):
             return
@@ -153,7 +153,7 @@ while 1:
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(dataReadyReg, 1)
 
-            currentState = changeState(currentState,State.GetPosition)
+            currentState = (currentState,State.GetPosition)
             continue
     
     # Gets robot's current position data    
@@ -179,7 +179,7 @@ while 1:
             if (len(currPos)>0):
                 d = np.linalg.norm(np.array([x,y])-np.array(currPos))
                 if (d < 10):
-                    currentState = changeState(currentState,State.ReturnMovement)
+                    currentState = (currentState,State.ReturnMovement)
                     continue
 
             currPos = [x,y]
@@ -189,7 +189,7 @@ while 1:
             pointDict[scanningID] = currPos
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
-            currentState = changeState(currentState,State.CheckPositionList)
+            currentState = (currentState,State.CheckPositionList
             continue
 
     # Check if we already have two position data and can calculate next one
@@ -198,24 +198,24 @@ while 1:
         if (isScanning):
             scanPoints.append(pointDict[scanningID])
             if (len(scanPoints) < 2):
-                currentState = changeState(currentState,State.ReturnMovement)
+                currentState = (currentState,State.ReturnMovement
             else:
                 scanPoints = []
                 if (iterationCounter == maxIterations):
                     print("getting center")
-                    currentState = changeState(currentState,State.CalculateCenter)
+                    currentState = (currentState,State.CalculateCenter
                     continue
-                currentState = changeState(currentState,State.CalculateNewPosition)
+                currentState = (currentState,State.CalculateNewPosition
         #if (len(pointArray) < 2):
         if (len(pointDict[scanningID]) < 2):
-            currentState = changeState(currentState,State.ReturnMovement)
+            currentState = (currentState,State.ReturnMovement
         else:
-            currentState = changeState(currentState,State.CalculateNewPositio)
+            currentState = (currentState,State.CalculateNewPositio
 
     # Need to find more points, return robot movement as it were
     elif (currentState == State.ReturnMovement):
         client.write_register(500,2)
-        currentState = changeState(currentState,State.SignalWait)
+        currentState = (currentState,State.SignalWait
 
     # Calculates new position data and sends it to robot
     elif (currentState == State.CalculateNewPosition):
@@ -255,7 +255,7 @@ while 1:
 
         client.write_register(500, 0)
         isScanning = True
-        currentState = changeState(currentState,State.WaitScanReady)
+        currentState = (currentState,State.WaitScanReady
 
     #Calculates and moves to center
     elif (currentState == State.CalculateCenter):
@@ -272,7 +272,7 @@ while 1:
         time.sleep(0.5)
         client.write_register(500, 5)
         client.write_register(510, 1)
-        currentState = changeState(currentState,State.Stop)
+        currentState = (currentState,State.Stop
 
     elif (currentState == State.Stop):
         var = raw_input("finished?")
@@ -284,7 +284,7 @@ while 1:
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         dataReady = dataReady.registers[0]
         if (dataReady == 5):
-            currentState = changeState(currentState,State.SignalWait)
+            currentState = (currentState,State.SignalWait
             stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
