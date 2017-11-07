@@ -115,12 +115,11 @@ idsToSearch = 2
 
 scanPoints = []
 isScanning = False
-pointsx = defaultdict(list)
-pointsy = defaultdict(list)
+pointsx = []
+pointsy = []
 iterationCounter = 0
-maxIterations = 2
+maxIterations = 3
 pointDict = defaultdict(list)
-centerDict = defaultdict(list)
 
 latestID = ""
 scanningID = ""
@@ -130,7 +129,6 @@ currentState = State.SignalWait
 
 client.write_register(500, 0)
 client.write_register(510, 0)
-client.write_register(1006,0)
 
 while 1:
     signalType = ""
@@ -187,10 +185,11 @@ while 1:
                     continue
 
             currPos = [x,y]
-            pointsx[scanningID].append(float(x))
-            pointsy[scanningID].append(float(y))
+            pointsx.append(float(x))
+            pointsy.append(float(y))
             log("\n {},{}".format(x,y))
             pointDict[scanningID].append(currPos)
+            msg.printMsg("\n Point added: {}".format(currPos))
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = changeState(currentState,State.CheckPositionList)
@@ -227,7 +226,7 @@ while 1:
 
     # Calculates new position data and sends it to robot
     elif (currentState == State.CalculateNewPosition):
-        newPointData = ujkeres(pointsx[scanningID],pointsy[scanningID],30)
+        newPointData = ujkeres(pointsx,pointsy,30)
         iterationCounter += 1
         newStart = newPointData["kezdo"]
         newEnd = newPointData["veg"]
@@ -280,14 +279,7 @@ while 1:
         time.sleep(0.5)
         client.write_register(500, 5)
         client.write_register(510, 1)
-        
-        centerDict[scanningID].append([cx,cy])
-        if (len(centerDict) == 1):
-            time.sleep(3)
-            client.write_register(500,2)
-            currentState = changeState(currentState, State.SignalWait)
-        else:
-            currentState = changeState(currentState, State.Stop)
+        currentState = changeState(currentState,State.Stop)
 
     elif (currentState == State.Stop):
         var = raw_input("finished?")
@@ -300,7 +292,7 @@ while 1:
         dataReady = dataReady.registers[0]
         if (dataReady == 5):
             currentState = changeState(currentState,State.SignalWait)
-            #stateMachine.event("ScanReady")
+            # stateMachine.event("ScanReady")
 
     #msg.printMsg("input: {} | filtered: {} | edge: {} ".format(input_v,signal,signalEdge))
 

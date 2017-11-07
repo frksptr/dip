@@ -15,7 +15,7 @@ def ujkeres(x,y,r):
     #print("scale {}".format(scale))
     if (diff[0] == 0):
         mmeroleges = 0
-        iranyvektor = np.array([0,1])
+        iranyvektor = np.array([1,0])
     else:
         m = diff[1]/diff[0]
         if (m == 0):
