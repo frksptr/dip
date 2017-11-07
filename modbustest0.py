@@ -19,7 +19,7 @@ try:
     client = ModbusTcpClient('192.168.0.104',502)
     conn = client.connect()
     print(conn)
-    client.write_register(500, pow(2,16)-5)
+    client.write_register(500, 13)
     client.close()
 except:
     print(sys.exc_info()[0])
