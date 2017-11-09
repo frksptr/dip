@@ -267,7 +267,7 @@ while 1:
 
     #Calculates and moves to center
     elif (currentState == State.CalculateCenter):
-        c = findCircle(pointsx,pointsy)
+        c = findCircle(pointsx[scanningID],pointsy[scanningID])
         print("findcircle: {}, current pos: {}".format(c,currPos))
         c = np.array(c)       
         c = c - currPos
