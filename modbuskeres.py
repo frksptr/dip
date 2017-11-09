@@ -163,7 +163,7 @@ while 1:
     # Gets robot's current position data    
     elif (currentState == State.GetPosition):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
-        msg.printMsg("\n Checking if data is ready: {}".format(dataReady))
+        #msg.printMsg("\n Checking if data is ready: {}".format(dataReady))
        
         if (dataReady == None):
             msg.printMsg("dataready none")
