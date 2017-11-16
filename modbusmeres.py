@@ -20,7 +20,7 @@ class Msg:
     cnt = 0
     cursorup = '\033[F'
     erase = '\033[K'
-    en = 0;
+    en = 0
     def printMsg(self, msg):
         if (self.en == 0):
             return
@@ -79,6 +79,7 @@ def log(s):
 # Raspberry config
 GPIO.setmode (GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
+
 serialPort = serial.Serial('/dev/ttyS0',9600)
 
 # Communication registers

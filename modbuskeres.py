@@ -211,6 +211,7 @@ while 1:
                 scanPoints = []
                 msg.printMsg("\nIterationCounter: {} | max iterations: {}".format(iterationCounter,maxIterations))
                 if (iterationCounter >= maxIterations):
+                    iterationCounter = 0
                     print("getting center")
                     currentState = changeState(currentState, State.CalculateCenter)
                     continue
