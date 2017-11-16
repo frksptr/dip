@@ -94,7 +94,7 @@ dataRead = 0
 
 client = ModbusTcpClient('192.168.0.104', 502)
 conn = client.connect()
-
+ 
 SignalFilter = Filter(16)
 SignalEdge = Edge()
 ReadyEdge = Edge()
@@ -194,7 +194,6 @@ while 1:
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
             currentState = changeState(currentState,State.CheckPositionList)
-
             continue
 
     # Check if we already have two position data and can calculate next one
@@ -203,7 +202,7 @@ while 1:
         #print("{}, length: {} ".format(pointArray,len(pointArray)))
         if (isScanning):
             msg.printMsg("\n scanPoints length: {}".format(len(scanPoints)))               
-            msg.printMsg("\nKibaszott pointDict[{}][-1:][0]: {}".format(scanningID,pointDict[scanningID][-1:][0]))
+            msg.printMsg("\n pointDict[{}][-1:][0]: {}".format(scanningID,pointDict[scanningID][-1:][0]))
             scanPoints.append(pointDict[scanningID][-1:][0])
 
             if (len(scanPoints) < 2):
@@ -213,15 +212,14 @@ while 1:
                 msg.printMsg("\nIterationCounter: {} | max iterations: {}".format(iterationCounter,maxIterations))
                 if (iterationCounter >= maxIterations):
                     print("getting center")
-                    currentState = changeState(currentState,State.CalculateCenter)
+                    currentState = changeState(currentState, State.CalculateCenter)
                     continue
-                currentState = changeState(currentState,State.CalculateNewPosition)
         #if (len(pointArray) < 2):
         msg.printMsg("\n len(pointDict[scanningID]) {}".format(len(pointDict[scanningID])))
         if (len(pointDict[scanningID]) < 2):
-            currentState = changeState(currentState,State.ReturnMovement)
+            currentState = changeState(currentState, State.ReturnMovement)
         else:
-            currentState = changeState(currentState,State.CalculateNewPosition)
+            currentState = changeState(currentState, State.CalculateNewPosition)
 
     # Need to find more points, return robot movement as it were
     elif (currentState == State.ReturnMovement):
@@ -286,6 +284,7 @@ while 1:
         
         centerDict[scanningID].append([cx,cy])
         if (len(centerDict) == 1):
+            finishedIDs.append(scanningID)
             time.sleep(3)
             client.write_register(500,2)
             currentState = changeState(currentState, State.SignalWait)
