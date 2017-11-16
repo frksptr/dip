@@ -204,7 +204,7 @@ while 1:
             msg.printMsg("\n scanPoints length: {}".format(len(scanPoints)))               
             msg.printMsg("\n pointDict[{}][-1:][0]: {}".format(scanningID,pointDict[scanningID][-1:][0]))
             scanPoints.append(pointDict[scanningID][-1:][0])
-
+            msg.printMsg("\n len(scanPoints): {}".format(len(scanPoints)))
             if (len(scanPoints) < 2):
                 currentState = changeState(currentState,State.ReturnMovement)
             else:
