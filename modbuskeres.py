@@ -89,10 +89,18 @@ serialPort = serial.Serial('/dev/ttyS0',9600)
 dataReadyReg = 500
 dataXReg = 1000
 dataYReg = 1002
-newDataReadyReg = 1006
+newDataReadyReg = 1008
 dataRead = 0
 
-client = ModbusTcpClient('192.168.0.104', 502)
+id1RegX = 520
+id1RegY = 522
+id2RegX = 524
+id2RegY = 526
+startIdSwayReg = 530
+
+
+ip = '192.168.0.42'
+client = ModbusTcpClient(ip, 502)
 conn = client.connect()
  
 SignalFilter = Filter(16)
@@ -172,7 +180,7 @@ while 1:
 
         readyEdge = ReadyEdge.chk(dataReady)['value']
 
-        if (readyEdge):
+        if (readyEdge['value'] == 1 and readyEdge['type'] == "rising"):
             time.sleep(0.5)
 
             xy = client.read_holding_registers(dataXReg,4)
@@ -193,6 +201,10 @@ while 1:
             pointDict[scanningID].append(currPos)
             #pointArray.append(currPos)
             msg.printMsg("\n Data ready signal changed to {}".format(dataReady))
+
+            #
+            client.write_register(newDataReadyReg,0)
+
             currentState = changeState(currentState,State.CheckPositionList)
             continue
 
@@ -217,7 +229,7 @@ while 1:
                     continue
         #if (len(pointArray) < 2):
         msg.printMsg("\n len(pointDict[scanningID]) {}".format(len(pointDict[scanningID])))
-        if (len(pointDict[scanningID]) < 2):
+        if (len(pointDict[scanningID]) < 2 or len(scanPoints) % 2 == 1):
             currentState = changeState(currentState, State.ReturnMovement)
         else:
             currentState = changeState(currentState, State.CalculateNewPosition)
@@ -293,15 +305,22 @@ while 1:
             currentState = changeState(currentState, State.Stop)
 
     elif (currentState == State.Stop):
-        var = raw_input("finished?")
-        log("finished")
-        file = open("idmeres.txt","w")
-        file.write(pointDict)
+
+        id1 = finishedIDs[0]
+        id2 = finishedIDs[1]
+
+        client.write_register(id1RegX, centerDict[id1][0])
+        client.write_register(id1RegX, centerDict[id1][1])
+        client.write_register(id2RegX, centerDict[id2][0])
+        client.write_register(id2RegX, centerDict[id2][1])
+
+        client.write_register(startIdSwayReg, 1)
 
     elif (currentState == State.WaitScanReady):
         dataReady = client.read_holding_registers(newDataReadyReg,1)
         dataReady = dataReady.registers[0]
-        if (dataReady == 5):
+        if (dataReady == 1):
+            client.write_register(newDataReadyReg, 0)
             currentState = changeState(currentState,State.SignalWait)
             #stateMachine.event("ScanReady")
 
