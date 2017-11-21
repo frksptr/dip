@@ -52,6 +52,7 @@ class State(Enum):
     ReturnMovement = 6
     CalculateCenter = 7
     Stop = 8
+    WaitCenterReady = 9
 
 
 def setNeg(n):
@@ -107,6 +108,7 @@ conn = client.connect()
 SignalFilter = Filter(16)
 SignalEdge = Edge()
 ReadyEdge = Edge()
+CenterReadyEdge = Edge()
 msg = Msg()
 
 edgeDetected = 0
@@ -294,20 +296,21 @@ while 1:
         client.write_register(512, cx)
         client.write_register(514, cy)
         time.sleep(0.5)
-        client.write_register(500, 5)
-        client.write_register(510, 1)
+        #client.write_register(500, 5)
+        client.write_register(500, 3) #goCenter
         
         centerDict[scanningID].append([cx,cy])
         if (len(centerDict) == 1):
             finishedIDs.append(scanningID)
-            time.sleep(3)
-            client.write_register(500,2)
-            currentState = changeState(currentState, State.SignalWait)
+            currentState = changeState(currentState, State.WaitSignal)
         else:
             currentState = changeState(currentState, State.Stop)
 
-    elif (currentState == State.Stop):
+    elif (currentState == State.WaitCenterReady):
+        centerReady = centerReadyEdge.chk()
+        client.write_register(500,2)
 
+    elif (currentState == State.Stop):
         id1 = finishedIDs[0]
         id2 = finishedIDs[1]
 
