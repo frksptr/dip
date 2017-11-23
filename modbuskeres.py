@@ -154,18 +154,22 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-
-            if (latestID in finishedIDs):
+            isSecondID = len(finishedIDs) == 1
+            if (latestID in finishedIDs or (isSecondID and latestID == "" ))x:
                 continue
-                
+
             if (signalEdge['type'] == "rising"):
                 latestID = readID(serialPort)
+
 
                 if (scanningID == "" and latestID not in finishedIDs):
                     scanningID = latestID
                 if (isScanning == True and scanningID != latestID):
                     continue
 
+            if (signalEdge['type'] == "falling"):
+                if (len(finishedIDs) == 1 and (scanningID == "" or scanningID in finishedIDs)):
+                    continue
 
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(newDataReadyReg, 0)
@@ -323,15 +327,15 @@ while 1:
         
         print("\nIDs:\n\t{}\n\t{}".format(id1,id2))
         
-        print("\n{}".format(centerDict[id1][0]))
-        print("\n{}".format(centerDict[id2][0]))
-        print("\n{}".format(centerDict[id1][1]))
-        print("\n{}".format(centerDict[id2][1]))
+        print("\n{}".format(centerDict[id1][0][0]))
+        print("\n{}".format(centerDict[id2][0][0]))
+        print("\n{}".format(centerDict[id1][0][1]))
+        print("\n{}".format(centerDict[id2][0][1]))
         
         client.write_register(id1RegX, centerDict[id1][0][0])
-        client.write_register(id1RegY, centerDict[id1][1][0])
+        client.write_register(id1RegY, centerDict[id1][0][1])
         client.write_register(id2RegX, centerDict[id2][0][0])
-        client.write_register(id2RegY, centerDict[id2][1][0])
+        client.write_register(id2RegY, centerDict[id2][0][1])
 
         client.write_register(startIdSwayReg, 1)
 
