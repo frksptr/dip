@@ -154,12 +154,8 @@ while 1:
 
         # Notify robot of RFID signal change
         if (signalEdge['value'] == 1):
-            isSecondID = len(finishedIDs) == 1
-            if (latestID in finishedIDs or (isSecondID and latestID == "" ))x:
-                continue
-
             if (signalEdge['type'] == "rising"):
-                latestID = readID(serialPort)
+                latestID = readID("")
 
 
                 if (scanningID == "" and latestID not in finishedIDs):
@@ -174,6 +170,7 @@ while 1:
             msg.printMsg("\n Edge detected, setting Reg500 to 1")
             client.write_register(newDataReadyReg, 0)
             client.write_register(dataReadyReg, 1)
+
             currentState = changeState(currentState,State.GetPosition)
             continue
     
